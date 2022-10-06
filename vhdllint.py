@@ -2480,6 +2480,9 @@ def CheckPackageBody(filename, clean_lines, start_line, end_line, name, error):
 			l = f_end_line + 1  # skip over procedure
 			continue
 
+		# detect constant declarations
+		CheckConstants(filename, clean_lines, l, error, in_pkg=True)
+
 		# check used identifiers
 		CheckIdentifiers(filename, clean_lines, l, error)
 

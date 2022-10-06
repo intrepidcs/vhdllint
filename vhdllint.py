@@ -1231,6 +1231,11 @@ def RemoveLocalScope(filename, error):
 		if not i.IsReferenced():
 			error(filename, i.lineref, 'build/unused', 2, 'Unused local identifier \'%s\'.' % (i.Name()))
 
+		# remove local
+		if i.Name().lower() in _all_identifiers:
+			if _all_identifiers[i.Name().lower()] == i:
+				_all_identifiers.pop(i.Name().lower(), None)
+
 	# remove last element
 	_local_identifiers.pop()
 

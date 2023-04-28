@@ -1880,6 +1880,10 @@ def CheckFunction(filename, clean_lines, start_line, end_line, name, error, in_p
 	for l in xrange(el+1, end_line):
 		line = clean_lines.lines[l]
 
+		CheckCaseStatements(filename, clean_lines, l, end_line, True, error)
+
+		CheckLoops(filename, clean_lines, l, end_line, error)
+
 		CheckBooleans(filename, clean_lines, l, error)
 
 		# check used identifiers
@@ -2031,6 +2035,10 @@ def CheckProcedure(filename, clean_lines, start_line, end_line, name, error, in_
 	# check after params
 	for l in xrange(el+1, end_line):
 		line = clean_lines.lines[l]
+
+		CheckCaseStatements(filename, clean_lines, l, end_line, True, error)
+
+		CheckLoops(filename, clean_lines, l, end_line, error)
 
 		CheckBooleans(filename, clean_lines, l, error)
 
@@ -2552,6 +2560,23 @@ def CheckLoop(filename, clean_lines, start_line, end_line, name, error):
 			error(filename, LineRef.OnlyLine(start_line), 'runtime/loops', 4, 'Infinite loop. Loop must contain wait or exit statement.')
 
 
+def CheckLoops(filename, clean_lines, line_num, end_line, error):
+	pline = clean_lines.lines[line_num]
+	# detect loops and process separately
+	l_match = Match(r'\s*((.*?)\s*:)?.*\bloop\b\s*$', pline)
+	if l_match:
+		label = l_match.group(2)
+		l_end_line = -1
+		# find the end line of the process
+		for l_l in xrange(line_num, end_line):
+			if Match(r'.*\bend\s+loop(\s+%s)?\b' % (label), clean_lines.lines[l_l]):
+				l_end_line = l_l
+				break
+		if l_end_line < 0:
+			return  # could not find end of function
+		CheckLoop(filename, clean_lines, line_num, l_end_line, label, error)
+
+
 def CheckCaseStatement(filename, clean_lines, start_line, end_line, label, name, is_sequential, error):
 	line = clean_lines.lines[start_line]
 	_lint_state.PrintVerbose("Detected case statement \'%s\' on lines %d-%d\n" % (name, start_line, end_line))
@@ -2578,6 +2603,24 @@ def CheckCaseStatement(filename, clean_lines, start_line, end_line, label, name,
 
 				if lhs.lower() == name.lower() and rhs.lower() == current_state.lower():
 					error(filename, LineRef.FromString(l, pline, stmt), 'readability/fsm', 4, 'Redundant assignment of state \'%s\' to \'%s\'' % (name, current_state))
+
+
+def CheckCaseStatements(filename, clean_lines, line_num, end_line, is_sequential, error):
+	pline = clean_lines.lines[line_num]
+
+	l_match = Match(r'\s*((.*?)\s*:)?.*\bcase\s+(.+?)\s+is', pline)
+	if l_match:
+		label = l_match.group(2)
+		name = l_match.group(3)
+		l_end_line = -1
+		# find the end line of the process
+		for l_l in xrange(line_num, end_line):
+			if Match(r'.*\bend\s+case(\s+%s)?\b' % (label), clean_lines.lines[l_l]):
+				l_end_line = l_l
+				break
+		if l_end_line < 0:
+			return  # could not find end of function
+		CheckCaseStatement(filename, clean_lines, line_num, l_end_line, label, name, is_sequential, error)
 
 
 def FindUsedVariables(line, direct_lhs_name=False):
@@ -2716,33 +2759,9 @@ def CheckProcess(filename, clean_lines, start_line, end_line, name, sensitivity_
 	for l in xrange(body_line, end_line):
 		pline = clean_lines.lines[l]
 
-		l_match = Match(r'\s*((.*?)\s*:)?.*\bcase\s+(.+?)\s+is', pline)
-		if l_match:
-			label = l_match.group(2)
-			name = l_match.group(3)
-			l_end_line = -1
-			# find the end line of the process
-			for l_l in xrange(l, end_line):
-				if Match(r'.*\bend\s+case(\s+%s)?\b' % (label), clean_lines.lines[l_l]):
-					l_end_line = l_l
-					break
-			if l_end_line < 0:
-				return  # could not find end of function
-			CheckCaseStatement(filename, clean_lines, l, l_end_line, label, name, sequential, error)
+		CheckCaseStatements(filename, clean_lines, l, end_line, sequential, error)
 
-		# detect loops and process separately
-		l_match = Match(r'\s*((.*?)\s*:)?.*\bloop\b\s*$', pline)
-		if l_match:
-			label = l_match.group(2)
-			l_end_line = -1
-			# find the end line of the process
-			for l_l in xrange(l, end_line):
-				if Match(r'.*\bend\s+loop(\s+%s)?\b' % (label), clean_lines.lines[l_l]):
-					l_end_line = l_l
-					break
-			if l_end_line < 0:
-				return  # could not find end of function
-			CheckLoop(filename, clean_lines, l, l_end_line, label, error)
+		CheckLoops(filename, clean_lines, l, end_line, error)
 
 		if not sim_process:
 			match = Match(r'.*?(\w+)\'event', pline)
@@ -2939,6 +2958,7 @@ def CheckIdentifiers(filename, clean_lines, line_num, error):
 	(write_vars, read_vars, is_assign) = FindUsedVariables(line)
 	if is_assign:
 		CheckReadIdentifiers(filename, clean_lines, line_num, error, read_vars)
+
 
 def CheckReadIdentifiers(filename, clean_lines, line_num, error, read_vars):
 	line = clean_lines.lines[line_num]

@@ -2223,8 +2223,19 @@ def CheckArchitecture(filename, clean_lines, start_line, end_line, name, error):
 			l = f_end_line + 1  # skip over procedure
 			continue
 
+		# check used identifiers in other signal declarations
 		CheckIdentifiers(filename, clean_lines, l, error)
 
+		# detect constant declarations
+		CheckConstants(filename, clean_lines, l, error)
+
+		# detect signal declarations
+		CheckSignals(filename, clean_lines, l, error)
+
+		# detect type declarations
+		CheckTypes(filename, clean_lines, l, error)
+
+		# detect assert statements
 		CheckAsserts(filename, clean_lines, l, error)
 
 		# next line

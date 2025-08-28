@@ -2638,7 +2638,7 @@ def FindUsedVariables(line, direct_lhs_name=False):
 	write = set()
 	read = set()
 	# check for assignments
-	match = Match(r'.*?' + _PATTERN_IDENTIFIER_USE + '\s*[<:]\=(.*);', line)
+	match = Match(r'^\s*' + _PATTERN_IDENTIFIER_USE + '\s*[<:]\=(.*);', line)
 	if match:
 		if direct_lhs_name == True:
 			# use lhs as given

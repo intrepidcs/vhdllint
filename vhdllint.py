@@ -42,7 +42,7 @@ from pathlib import Path
 # if empty, use defaults
 _valid_extensions = set([])
 
-__VERSION__ = '0.0.1'
+__VERSION__ = '1.0'
 
 xrange = range  # Python 3
 

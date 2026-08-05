@@ -29,17 +29,11 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import codecs
-import copy
 import getopt
 import glob
-import itertools
-import math  # for log
 import os
 import re
-import string
 import sys
-import sysconfig
-import unicodedata
 import xml.etree.ElementTree
 from collections import Counter
 from collections import OrderedDict
@@ -1824,7 +1818,7 @@ def CheckUsedPackages(filename, clean_lines, line_num, error):
 			words = "".join(uses.split()).split(".")  # remove whitespace before splitting
 			for w in words:
 				if IsReservedWord(w):
-					continue;
+					continue
 				AddOtherIdentifier(w, LineRef.FromString(line_num, line, w), filename, error)
 
 				if w.lower() in _PACKAGES_DEPRECATED:

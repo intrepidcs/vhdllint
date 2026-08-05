@@ -467,8 +467,5 @@ def test_no_sre_compile_usage():
 	assert "sre_compile" not in source
 
 
-@pytest.mark.xfail(
-	reason="console_scripts entry point needs py_modules=['vhdllint'] to be "
-		   "importable", strict=True)
 def test_setup_declares_py_modules():
 	assert "py_modules" in (ROOT / "setup.py").read_text(encoding="utf-8")

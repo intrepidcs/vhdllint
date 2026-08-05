@@ -5,6 +5,7 @@ Tests marked xfail(strict=True) document known bugs: they fail today and
 must XPASS (forcing marker removal) once the bug is fixed.
 """
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -328,6 +329,19 @@ def test_cli_end_to_end(tmp_path):
 	result = subprocess.run(
 		[sys.executable, str(ROOT / "vhdllint.py"), str(bad)],
 		capture_output=True, text=True)
+	assert result.returncode == 1
+	assert "legal/copyright" in result.stderr
+
+
+def test_cli_nonascii_output_does_not_crash(tmp_path):
+	bad = tmp_path / "bäd.vhd"
+	bad.write_text("entity bad is\nend entity bad;\n")
+	env = dict(os.environ, PYTHONIOENCODING="ascii")
+	result = subprocess.run(
+		[sys.executable, str(ROOT / "vhdllint.py"), str(bad)],
+		capture_output=True, text=True, env=env,
+		encoding="utf-8", errors="replace")
+	assert "Traceback" not in result.stderr
 	assert result.returncode == 1
 	assert "legal/copyright" in result.stderr
 

@@ -3711,24 +3711,21 @@ def _IsParentOrSame(parent, child):
 
 def main():
 	filenames = ParseArguments(sys.argv[1:])
-	backup_err = sys.stderr
-	try:
-		# Change stderr to write with replacement characters so we don't die
-		# if we try to print something containing non-ASCII characters.
-		sys.stderr = codecs.StreamReader(sys.stderr, 'replace')
+	# Write output with replacement characters so we don't die if we try
+	# to print something containing non-ASCII characters.
+	for stream in (sys.stdout, sys.stderr):
+		if hasattr(stream, 'reconfigure'):
+			stream.reconfigure(errors='replace')
 
-		_lint_state.ResetErrorCounts()
-		for filename in filenames:
-			ProcessFile(filename, _lint_state.verbose_level)
-		# If --quiet is passed, suppress printing error count unless there are errors.
-		if not _lint_state.quiet or _lint_state.error_count > 0:
-			_lint_state.PrintErrorCounts()
+	_lint_state.ResetErrorCounts()
+	for filename in filenames:
+		ProcessFile(filename, _lint_state.verbose_level)
+	# If --quiet is passed, suppress printing error count unless there are errors.
+	if not _lint_state.quiet or _lint_state.error_count > 0:
+		_lint_state.PrintErrorCounts()
 
-		if _lint_state.output_format == 'junit':
-			sys.stderr.write(_lint_state.FormatJUnitXML())
-
-	finally:
-		sys.stderr = backup_err
+	if _lint_state.output_format == 'junit':
+		sys.stderr.write(_lint_state.FormatJUnitXML())
 
 	sys.exit(_lint_state.error_count > 0)
 

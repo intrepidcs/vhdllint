@@ -15,7 +15,7 @@ This will make `vhdllint` executable from the local directory and allow it to be
 
 The tool can now be referenced directly with 
 
-`vhdllint.py ...`
+`vhdllint ...`
 
 ## Usage
 Run with:

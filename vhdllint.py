@@ -1399,6 +1399,9 @@ class CleansedLines(object):
 	All these members are of <type 'list'>, and of the same length.
 	"""
 
+	# Safety cap so malformed input cannot fold an entire file into one line.
+	_MAX_JOINED_LINES = 10
+
 	def __init__(self, lines):
 		self.elided = []
 		self.lines = []
@@ -1409,6 +1412,43 @@ class CleansedLines(object):
 			self.lines.append(CleanseComments(self.raw_lines[linenum]))
 			elided = self._CollapseStrings(self.lines[linenum])
 			self.elided.append(CleanseComments(elided))
+		self._JoinContinuationLines()
+
+	@staticmethod
+	def _IsCompleteStatement(stripped):
+		"""Returns True if a stripped line does not continue on the next line."""
+		if not stripped or stripped.startswith('//'):
+			return True
+		if Match(r'(else|begin|end)$', stripped):
+			return True
+		return bool(Match(r'.*([;,()]|=>|\b(then|is|loop|generate|select))$', stripped))
+
+	def _JoinContinuationLines(self):
+		"""Folds statements spanning multiple lines into their first line.
+		Continuation lines become empty so per-line checks see one complete
+		statement per line without needing pre-beautified input. Array
+		lengths are unchanged; errors report at the statement's first line.
+		"""
+		i = 0
+		while i < self.num_lines:
+			stripped = self.elided[i].strip()
+			j = i + 1
+			joined = 0
+			while (not self._IsCompleteStatement(stripped) and j < self.num_lines
+					and joined < self._MAX_JOINED_LINES):
+				nxt = self.elided[j].strip()
+				if not nxt:
+					break  # blank or comment-only line ends the fold
+				if Match(r'(port|generic)\b', nxt):
+					break  # port/generic checks anchor on these lines
+				self.lines[i] = self.lines[i].rstrip() + ' ' + self.lines[j].strip()
+				self.elided[i] = self.elided[i].rstrip() + ' ' + nxt
+				self.lines[j] = ''
+				self.elided[j] = ''
+				stripped = self.elided[i].strip()
+				joined += 1
+				j += 1
+			i = j if joined else i + 1
 
 	def NumLines(self):
 		"""Returns the number of lines represented."""

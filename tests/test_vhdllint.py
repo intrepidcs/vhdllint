@@ -441,6 +441,71 @@ def test_single_process_two_writes_not_multiple_drivers():
 
 
 # ---------------------------------------------------------------------------
+# Multi-line statements: checks must work without pre-beautified input
+# ---------------------------------------------------------------------------
+
+def test_fsm_detection_with_arrow_on_next_line():
+	decls = (
+		"  type state_t is (ST_A, ST_B);\n"
+		"  signal state : state_t;\n"
+	)
+	body = (
+		"  process(clk_i)\n"
+		"  begin\n"
+		"    if rising_edge(clk_i) then\n"
+		"      case state is\n"
+		"        when ST_A\n"
+		"          =>\n"
+		"          state <= ST_A;\n"
+		"        when others =>\n"
+		"          state <= ST_A;\n"
+		"      end case;\n"
+		"    end if;\n"
+		"  end process;\n"
+	)
+	assert "readability/fsm" in categories(lint(design(decls=decls, body=body)))
+
+
+def test_latch_detected_in_split_assignment():
+	body = (
+		"  q_o <= d_i\n"
+		"    when clk_i = '1';\n"
+	)
+	assert "runtime/latches" in categories(lint(design(body=body)))
+
+
+def test_boolean_equality_detected_across_lines():
+	body = (
+		"  process(en_s)\n"
+		"  begin\n"
+		"    if en_s =\n"
+		"      true then\n"
+		"      q_o <= d_i;\n"
+		"    end if;\n"
+		"  end process;\n"
+	)
+	source = design(decls="  signal en_s : boolean;\n", body=body)
+	assert "readability/booleans" in categories(lint(source))
+
+
+def test_signal_used_in_split_assignment_not_unused():
+	decls = "  signal x_s : std_logic;\n"
+	body = (
+		"  process(clk_i)\n"
+		"  begin\n"
+		"    if rising_edge(clk_i) then\n"
+		"      q_o <=\n"
+		"        d_i and x_s;\n"
+		"      x_s <= d_i;\n"
+		"    end if;\n"
+		"  end process;\n"
+	)
+	errors = [e for e in lint(design(decls=decls, body=body))
+			  if e[1] == "build/unused"]
+	assert not any("x_s" in message for _, _, _, message in errors)
+
+
+# ---------------------------------------------------------------------------
 # Known-bug regression tests: xfail today, must XPASS after the fix
 # ---------------------------------------------------------------------------
 

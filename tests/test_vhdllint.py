@@ -409,9 +409,6 @@ def test_single_process_two_writes_not_multiple_drivers():
 # Known-bug regression tests: xfail today, must XPASS after the fix
 # ---------------------------------------------------------------------------
 
-@pytest.mark.xfail(
-	reason="Match/Search share _regexp_compile_cache keyed by pattern only; "
-		   "flags depend on which compiled first", strict=True)
 def test_match_search_cache_flag_collision():
 	pattern = r"zz_cache_probe"
 	vhdllint._regexp_compile_cache.clear()
@@ -447,8 +444,6 @@ def test_fsm_case_arrow_on_next_line_does_not_crash():
 	lint(design(decls=decls, body=body))  # must not raise
 
 
-@pytest.mark.xfail(
-	reason="sre_compile is deprecated (Python 3.11+); use re.compile", strict=True)
 def test_no_sre_compile_usage():
 	source = (ROOT / "vhdllint.py").read_text(encoding="utf-8")
 	assert "sre_compile" not in source

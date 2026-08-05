@@ -36,7 +36,6 @@ import itertools
 import math  # for log
 import os
 import re
-import sre_compile
 import string
 import sys
 import sysconfig
@@ -1375,16 +1374,19 @@ def Match(pattern, s):
 	# The regexp compilation caching is inlined in both Match and Search for
 	# performance reasons; factoring it out into a separate function turns out
 	# to be noticeably expensive.
-	if pattern not in _regexp_compile_cache:
-		_regexp_compile_cache[pattern] = sre_compile.compile(pattern, sre_compile.SRE_FLAG_IGNORECASE)
-	return _regexp_compile_cache[pattern].match(s)
+	# Cache key must include flags: Match and Search compile with different ones.
+	key = (pattern, re.IGNORECASE)
+	if key not in _regexp_compile_cache:
+		_regexp_compile_cache[key] = re.compile(pattern, re.IGNORECASE)
+	return _regexp_compile_cache[key].match(s)
 
 
 def Search(pattern, s):
 	"""Searches the string for the pattern, caching the compiled regexp."""
-	if pattern not in _regexp_compile_cache:
-		_regexp_compile_cache[pattern] = sre_compile.compile(pattern)
-	return _regexp_compile_cache[pattern].search(s)
+	key = (pattern, 0)
+	if key not in _regexp_compile_cache:
+		_regexp_compile_cache[key] = re.compile(pattern)
+	return _regexp_compile_cache[key].search(s)
 
 
 class CleansedLines(object):

@@ -284,6 +284,27 @@ def test_comment_missing_space():
 	assert "whitespace/comments" in categories(lint(source))
 
 
+def test_redundant_fsm_state_assignment():
+	decls = (
+		"  type state_t is (ST_A, ST_B);\n"
+		"  signal state : state_t;\n"
+	)
+	body = (
+		"  process(clk_i)\n"
+		"  begin\n"
+		"    if rising_edge(clk_i) then\n"
+		"      case state is\n"
+		"        when ST_A =>\n"
+		"          state <= ST_A;\n"
+		"        when others =>\n"
+		"          state <= ST_A;\n"
+		"      end case;\n"
+		"    end if;\n"
+		"  end process;\n"
+	)
+	assert "readability/fsm" in categories(lint(design(decls=decls, body=body)))
+
+
 def test_nolint_suppression(capsys):
 	base = HEADER + "entity test is\nend entity test;\n"
 	with_tab = base.replace("entity test is", "\tentity test is")
@@ -419,9 +440,6 @@ def test_match_search_cache_flag_collision():
 	assert vhdllint.Match(pattern, "ZZ_CACHE_PROBE")
 
 
-@pytest.mark.xfail(
-	reason="CheckCaseStatement crashes (current_state is None) when '=>' "
-		   "is on a different line than 'when'", strict=True)
 def test_fsm_case_arrow_on_next_line_does_not_crash():
 	decls = (
 		"  type state_t is (ST_A, ST_B);\n"

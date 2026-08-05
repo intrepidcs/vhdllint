@@ -2606,7 +2606,7 @@ def CheckCaseStatement(filename, clean_lines, start_line, end_line, label, name,
 		if match:
 			current_state = match.group(1)
 
-		if is_sequential:
+		if is_sequential and current_state is not None:
 			# look for assignments of state, state <= xxx
 			match = Match(r'.*?((.*?)\s*[<:]\=(.*?))\s*;', pline)
 			if match:

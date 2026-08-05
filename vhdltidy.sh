@@ -16,6 +16,7 @@ for file in "$@"; do
 
   if [ ! -f "$file" ]; then
     echo "File $file does not exist!"
+    continue
   fi
   
   echo "Processing file $file..."

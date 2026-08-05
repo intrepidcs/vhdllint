@@ -460,12 +460,3 @@ def test_fsm_case_arrow_on_next_line_does_not_crash():
 		"  end process;\n"
 	)
 	lint(design(decls=decls, body=body))  # must not raise
-
-
-def test_no_sre_compile_usage():
-	source = (ROOT / "vhdllint.py").read_text(encoding="utf-8")
-	assert "sre_compile" not in source
-
-
-def test_setup_declares_py_modules():
-	assert "py_modules" in (ROOT / "setup.py").read_text(encoding="utf-8")

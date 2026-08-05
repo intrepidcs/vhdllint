@@ -2640,7 +2640,7 @@ def FindUsedVariables(line, direct_lhs_name=False):
 	write = set()
 	read = set()
 	# check for assignments
-	match = Match(r'^\s*' + _PATTERN_IDENTIFIER_USE + '\s*[<:]\=(.*);', line)
+	match = Match(r'^\s*' + _PATTERN_IDENTIFIER_USE + r'\s*[<:]\=(.*);', line)
 	if match:
 		if direct_lhs_name == True:
 			# use lhs as given
@@ -2704,13 +2704,13 @@ def CheckProcess(filename, clean_lines, start_line, end_line, name, sensitivity_
 			clk_name = match.group(1)
 			break
 
-		match = Match(r'.*\brising_edge\s*\((' + _PATTERN_IDENTIFIER_USE + ')\)', pline)
+		match = Match(r'.*\brising_edge\s*\((' + _PATTERN_IDENTIFIER_USE + r')\)', pline)
 		if match:
 			sequential = True
 			clk_name = match.group(1)
 			break
 
-		match = Match(r'.*\bfalling_edge\s*\((' + _PATTERN_IDENTIFIER_USE + ')\)', pline)
+		match = Match(r'.*\bfalling_edge\s*\((' + _PATTERN_IDENTIFIER_USE + r')\)', pline)
 		if match:
 			sequential = True
 			clk_name = match.group(1)

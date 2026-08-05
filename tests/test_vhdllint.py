@@ -539,3 +539,16 @@ def test_fsm_case_arrow_on_next_line_does_not_crash():
 		"  end process;\n"
 	)
 	lint(design(decls=decls, body=body))  # must not raise
+
+
+def test_malformed_names_do_not_crash():
+	# regex metachars in captured names must not reach re.compile
+	source = HEADER + (
+		"entity foo( is\n"
+		"end entity foo(;\n"
+		"\n"
+		"architecture a( of foo( is\n"
+		"begin\n"
+		"end architecture a(;\n"
+	)
+	lint(source)  # must not raise

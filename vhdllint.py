@@ -2282,7 +2282,7 @@ def CheckArchitecture(filename, clean_lines, start_line, end_line, name, error):
 
 def CheckArchitectures(filename, clean_lines, line_num, error):
 	line = clean_lines.lines[line_num]
-	match = Match(r'\s*\barchitecture\s+(.+?)\s+of\s+(.+?)\s+is', line)
+	match = Match(r'\s*\barchitecture\s+(\w+)\s+of\s+(\w+)\s+is', line)
 	if not match:
 		return
 
@@ -2415,7 +2415,7 @@ def CheckEntity(filename, clean_lines, start_line, end_line, name, error):
 
 def CheckEntities(filename, clean_lines, line_num, error):
 	line = clean_lines.lines[line_num]
-	match = Match(r'\s*\bentity\s+(.+?)\s+is', line)
+	match = Match(r'\s*\bentity\s+(\w+)\s+is', line)
 	if not match:
 		return
 
@@ -2608,13 +2608,14 @@ def CheckLoop(filename, clean_lines, start_line, end_line, name, error):
 def CheckLoops(filename, clean_lines, line_num, end_line, error):
 	pline = clean_lines.lines[line_num]
 	# detect loops and process separately
-	l_match = Match(r'\s*((.*?)\s*:)?.*\bloop\b\s*$', pline)
+	l_match = Match(r'\s*((\w+)\s*:)?.*\bloop\b\s*$', pline)
 	if l_match:
 		label = l_match.group(2)
 		l_end_line = -1
+		end_re = r'.*\bend\s+loop(\s+%s)?\b' % (label) if label else r'.*\bend\s+loop\b'
 		# find the end line of the process
 		for l_l in xrange(line_num, end_line):
-			if Match(r'.*\bend\s+loop(\s+%s)?\b' % (label), clean_lines.lines[l_l]):
+			if Match(end_re, clean_lines.lines[l_l]):
 				l_end_line = l_l
 				break
 		if l_end_line < 0:
@@ -2653,14 +2654,15 @@ def CheckCaseStatement(filename, clean_lines, start_line, end_line, label, name,
 def CheckCaseStatements(filename, clean_lines, line_num, end_line, is_sequential, error):
 	pline = clean_lines.lines[line_num]
 
-	l_match = Match(r'\s*((.*?)\s*:)?.*\bcase\s+(.+?)\s+is', pline)
+	l_match = Match(r'\s*((\w+)\s*:)?.*\bcase\s+(.+?)\s+is', pline)
 	if l_match:
 		label = l_match.group(2)
 		name = l_match.group(3)
 		l_end_line = -1
+		end_re = r'.*\bend\s+case(\s+%s)?\b' % (label) if label else r'.*\bend\s+case\b'
 		# find the end line of the process
 		for l_l in xrange(line_num, end_line):
-			if Match(r'.*\bend\s+case(\s+%s)?\b' % (label), clean_lines.lines[l_l]):
+			if Match(end_re, clean_lines.lines[l_l]):
 				l_end_line = l_l
 				break
 		if l_end_line < 0:
@@ -2875,17 +2877,19 @@ def CheckProcesses(filename, clean_lines, line_num, error):
 		return False
 
 	line = clean_lines.lines[line_num]
-	match = Match(r'\s*((.*?)\s*:)?\s*\bprocess\b\s*(\((.*)\))?', line)
+	match = Match(r'\s*((\w+)\s*:)?\s*\bprocess\b\s*(\((.*)\))?', line)
 	if not match:
 		return False, 0
 
 	label = match.group(2)
 	start_line = line_num
 	end_line = -1
+	end_re = (r'.*\bend\s+(process|%s|process\s+%s)\b' % (label, label)
+			if label else r'.*\bend\s+process\b')
 	# find the end line of the process
 	for l in xrange(line_num, clean_lines.NumLines()):
 		pline = clean_lines.lines[l]
-		if Match(r'.*\bend\s+(process|%s|process\s+%s)\b' % (label, label), pline):
+		if Match(end_re, pline):
 			end_line = l
 			break
 	if end_line < 0:

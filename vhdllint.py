@@ -203,7 +203,6 @@ _constant_identifiers = {}
 _local_identifiers = []
 _other_identifiers = {}
 _all_identifiers = OrderedDict()
-_drivers = set()
 
 # Commands for sed to fix the problem
 _SED_FIXUPS = {
@@ -908,7 +907,6 @@ def ResetFileData():
 	_local_identifiers.clear()
 	_other_identifiers.clear()
 	_all_identifiers.clear()
-	_drivers.clear()
 
 class LineRef(object):
 	"""Track a identifier line reference and column region"""
@@ -2703,7 +2701,6 @@ def CheckProcess(filename, clean_lines, start_line, end_line, name, sensitivity_
 	_lint_state.PrintVerbose("Detected process \'%s\' on lines %d-%d (%s)\n" % (name, start_line, end_line, sensitivity_list))
 	if name:
 		AddOtherIdentifier(name, LineRef.FromString(start_line, line, name), filename, error)
-	global _drivers
 	process_drivers = set()
 	process_inputs = set()
 	contains_all = False
@@ -2862,11 +2859,6 @@ def CheckProcess(filename, clean_lines, start_line, end_line, name, sensitivity_
 		inter = process_drivers.intersection(process_inputs)
 		for i in inter:
 			error(filename, LineRef.OnlyLine(start_line), 'runtime/combinational_loop', 5, 'Possible combinational loop detected on signal \'%s\'.' % (i))
-
-	# add all written values to the driver list
-	# next time this value is written from outside this process
-	# we will throw an error
-	_drivers = _drivers | process_drivers
 
 	RemoveLocalScope(filename, error)
 

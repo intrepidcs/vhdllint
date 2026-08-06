@@ -440,6 +440,92 @@ def test_output_port_name_inside_report_string_not_flagged_as_read():
 	assert "build/vhdl2008/outputs" not in categories(lint(design(decls=decls, body=body, ports=ports)))
 
 
+def test_comb_process_default_assignment_not_combinational_loop():
+	decls = (
+		"  signal i_shift_storage : std_logic;\n"
+		"  signal s_axis_tvalid : std_logic;\n"
+		"  signal i_hold_input : std_logic;\n"
+		"  signal i_clear_storage : std_logic;\n"
+		"  signal n : std_logic_vector(3 downto 0);\n"
+		"  signal q : std_logic_vector(3 downto 0);\n"
+	)
+	body = (
+		"  comb_proc : process (all)\n"
+		"  begin\n"
+		"    n <= q;\n"
+		"\n"
+		"    if i_shift_storage = '1' then\n"
+		"      n(0) <= '0';\n"
+		"      n(3 downto 1) <= q(2 downto 0);\n"
+		"    end if;\n"
+		"\n"
+		"    if i_shift_storage = '1' and s_axis_tvalid = '1' and i_hold_input = '0' then\n"
+		"      n(0) <= '1';\n"
+		"    end if;\n"
+		"\n"
+		"    if i_clear_storage = '1' then\n"
+		"      n <= (others => '0');\n"
+		"    end if;\n"
+		"  end process comb_proc;\n"
+	)
+	assert "runtime/combinational_loop" not in categories(lint(design(decls=decls, body=body)))
+
+
+def test_comb_process_record_field_writes_not_combinational_loop():
+	decls = (
+		"  constant g_num_reg_stages : integer := 4;\n"
+		"  type axis_word_t is record\n"
+		"    tdata : std_logic;\n"
+		"    tkeep : std_logic;\n"
+		"    tlast : std_logic;\n"
+		"    tvalid : std_logic;\n"
+		"  end record;\n"
+		"  type axis_word_arr_t is array (0 to g_num_reg_stages - 1) of axis_word_t;\n"
+		"  constant c_axis_word : axis_word_t := (\n"
+		"    tdata => '0',\n"
+		"    tkeep => '0',\n"
+		"    tlast => '0',\n"
+		"    tvalid => '0'\n"
+		"  );\n"
+		"  signal i_shift_storage : std_logic;\n"
+		"  signal s_axis_tvalid : std_logic;\n"
+		"  signal i_hold_input : std_logic;\n"
+		"  signal i_clear_storage : std_logic;\n"
+		"  signal s_axis_tdata : std_logic;\n"
+		"  signal s_axis_tkeep : std_logic;\n"
+		"  signal s_axis_tlast : std_logic;\n"
+		"  signal n : axis_word_arr_t;\n"
+		"  signal q : axis_word_arr_t;\n"
+	)
+	body = (
+		"  comb_proc : process (all)\n"
+		"  begin\n"
+		"\n"
+		"    n <= q;\n"
+		"\n"
+		"    if i_shift_storage = '1' then\n"
+		"      n(0) <= c_axis_word;\n"
+		"      n(1 to g_num_reg_stages - 1) <= q(0 to g_num_reg_stages - 2);\n"
+		"    end if;\n"
+		"\n"
+		"    if i_shift_storage = '1' and s_axis_tvalid = '1' and i_hold_input = '0' then\n"
+		"      n(0).tdata <= s_axis_tdata;\n"
+		"      n(0).tkeep <= s_axis_tkeep;\n"
+		"      n(0).tlast <= s_axis_tlast;\n"
+		"      n(0).tvalid <= '1';\n"
+		"    end if;\n"
+		"\n"
+		"    if i_clear_storage = '1' then\n"
+		"      for i in 0 to g_num_reg_stages - 1 loop\n"
+		"        n(i) <= c_axis_word;\n"
+		"      end loop;\n"
+		"    end if;\n"
+		"\n"
+		"  end process comb_proc;\n"
+	)
+	assert "runtime/combinational_loop" not in categories(lint(design(decls=decls, body=body)))
+
+
 def test_comment_divider_not_flagged():
 	source = design(decls="  ----------------------------------------\n")
 	assert "whitespace/comments" not in categories(lint(source))

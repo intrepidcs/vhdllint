@@ -2675,21 +2675,29 @@ def FindUsedVariables(line, direct_lhs_name=False):
 	read = set()
 	# Ignore quoted text so identifier scans do not flag words inside reports.
 	line_no_strings = re.sub(r'"[^"]*"', '""', line)
+
+	def _GetBaseIdentifier(expr):
+		# Accept selectors like a, a.b, a(0), a(0).b(1), a.b(0).c.
+		match = Match(r'\s*(\w+)(?:\s*(?:\([^\)]*\)|\.\w+))*\s*$', expr)
+		if not match:
+			return None
+		return match.group(1)
+
 	# check for assignments
-	match = Match(r'^\s*' + _PATTERN_IDENTIFIER_USE + r'\s*[<:]\=(.*);', line_no_strings)
+	match = Match(r'^\s*(.*?)\s*[<:]\=\s*(.*)\s*;', line_no_strings)
 	if match:
+		lhs_expr = match.group(1)
+		rhs_expr = match.group(2)
 		if direct_lhs_name == True:
 			# use lhs as given
-			lhs = match.group(1)
+			lhs = lhs_expr
 			write_words = [lhs]
 		else:
-			# use only signal and not range
-			lhs = match.group(2)
-			write_words = re.findall(r'\b[\w\']+\b', lhs)
+			lhs = _GetBaseIdentifier(lhs_expr)
+			write_words = [lhs] if lhs else []
 		write = set([i for i in write_words if IsSignalIdentifier(i)])
 
-		rhs = match.group(4)
-		read_words = re.findall(r'\b[\w\']+\b', rhs)
+		read_words = re.findall(r'\b[\w\']+\b', rhs_expr)
 		is_assign = True
 	else:
 		read_words = re.findall(r'\b[\w\']+\b', line_no_strings)
@@ -2698,7 +2706,6 @@ def FindUsedVariables(line, direct_lhs_name=False):
 	read = set([i for i in read_words if IsSignalIdentifier(i)])
 
 	return (write, read, is_assign)
-
 
 def CheckProcess(filename, clean_lines, start_line, end_line, name, sensitivity_list, error):
 	line = clean_lines.lines[start_line]

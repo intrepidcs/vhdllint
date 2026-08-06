@@ -2673,8 +2673,10 @@ def CheckCaseStatements(filename, clean_lines, line_num, end_line, is_sequential
 def FindUsedVariables(line, direct_lhs_name=False):
 	write = set()
 	read = set()
+	# Ignore quoted text so identifier scans do not flag words inside reports.
+	line_no_strings = re.sub(r'"[^"]*"', '""', line)
 	# check for assignments
-	match = Match(r'^\s*' + _PATTERN_IDENTIFIER_USE + r'\s*[<:]\=(.*);', line)
+	match = Match(r'^\s*' + _PATTERN_IDENTIFIER_USE + r'\s*[<:]\=(.*);', line_no_strings)
 	if match:
 		if direct_lhs_name == True:
 			# use lhs as given
@@ -2690,7 +2692,7 @@ def FindUsedVariables(line, direct_lhs_name=False):
 		read_words = re.findall(r'\b[\w\']+\b', rhs)
 		is_assign = True
 	else:
-		read_words = re.findall(r'\b[\w\']+\b', line)
+		read_words = re.findall(r'\b[\w\']+\b', line_no_strings)
 		is_assign = False
 
 	read = set([i for i in read_words if IsSignalIdentifier(i)])

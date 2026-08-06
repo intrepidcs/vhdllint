@@ -421,6 +421,25 @@ def test_named_port_map_not_flagged():
 	assert "readability/portmaps" not in categories(lint(design(body=body)))
 
 
+def test_output_port_name_inside_report_string_not_flagged_as_read():
+	ports = (
+		"    overflow : out std_logic := '0';\n"
+		"    q_o : out std_logic\n"
+	)
+	decls = "  signal overflow_reg : std_logic;\n"
+	body = (
+		"  process(all)\n"
+		"  begin\n"
+		"    if true then\n"
+		"      assert overflow_reg /= '1'\n"
+		"        report \"overflow should never occur in this mode\"\n"
+		"        severity failure;\n"
+		"    end if;\n"
+		"  end process;\n"
+	)
+	assert "build/vhdl2008/outputs" not in categories(lint(design(decls=decls, body=body, ports=ports)))
+
+
 def test_comment_divider_not_flagged():
 	source = design(decls="  ----------------------------------------\n")
 	assert "whitespace/comments" not in categories(lint(source))

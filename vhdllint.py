@@ -1413,7 +1413,7 @@ class CleansedLines(object):
 			return True
 		if Match(r'(else|begin|end)$', stripped):
 			return True
-		return bool(Match(r'.*([;,()]|=>|\b(then|is|loop|generate|select))$', stripped))
+		return bool(Match(r'.*([;,()]|=>|\b(then|is|loop|generate|select|record|protected|units|block))$', stripped))
 
 	def _JoinContinuationLines(self):
 		"""Folds statements spanning multiple lines into their first line.

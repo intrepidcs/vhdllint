@@ -179,6 +179,22 @@ def test_integer_types_with_range_ok(stype):
 	assert "runtime/integers" not in categories(lint(source))
 
 
+def test_record_fields_nolint_integers_not_misattributed(capsys):
+	decls = (
+		"  type test_cfg_t is record\n"
+		"    tdata_width        : natural;       -- NOLINT(runtime/integers)\n"
+		"    rx_fifo_size_bytes : natural;       -- NOLINT(runtime/integers)\n"
+		"    enable_cdc         : boolean;\n"
+		"  end record;\n"
+	)
+	source = design(decls=decls)
+
+	vhdllint._lint_state.ResetErrorCounts()
+	vhdllint.ProcessFileData("test.vhd", "vhd", source.split("\n"), vhdllint.Error)
+	err = capsys.readouterr().err
+	assert "runtime/integers" not in err
+
+
 def test_unused_signal():
 	source = design(decls="  signal unused_s : std_logic;\n")
 	errors = [e for e in lint(source) if e[1] == "build/unused"]

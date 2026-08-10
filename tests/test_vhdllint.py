@@ -544,6 +544,31 @@ def test_signal_used_only_in_port_map_not_unused():
 	assert not any("x_s" in message for _, _, _, message in errors)
 
 
+def test_local_constant_used_only_between_attribute_ticks_not_unused():
+	# C_AFTER_LENGTH is only referenced between two 'high attribute ticks on
+	# the same line. The identifier scanner must not mistake the attribute
+	# ticks for a paired quoted string and skip everything between them.
+	decls = (
+		"  type byte_arr_t is array (natural range <>) of std_logic;\n"
+		"\n"
+		"  function remove_range (\n"
+		"    arr         : byte_arr_t;\n"
+		"    start_index : natural;\n"
+		"    end_index   : natural\n"
+		"  ) return byte_arr_t is\n"
+		"    constant C_BEFORE_LENGTH : natural := start_index;\n"
+		"    constant C_AFTER_LENGTH  : natural := arr'high - end_index;\n"
+		"    variable result          : byte_arr_t(arr'low to arr'high-(end_index-start_index)-1);\n"
+		"  begin\n"
+		"    result(result'low to C_BEFORE_LENGTH-1)             := arr(arr'low to C_BEFORE_LENGTH-1);\n"
+		"    result(result'high-C_AFTER_LENGTH+1 to result'high) := arr(end_index+1 to arr'high);\n"
+		"    return result;\n"
+		"  end function remove_range;\n"
+	)
+	errors = [e for e in lint(design(decls=decls)) if e[1] == "build/unused"]
+	assert not any("C_AFTER_LENGTH" in message for _, _, _, message in errors)
+
+
 def test_single_process_two_writes_not_multiple_drivers():
 	decls = "  signal x_s : std_logic;\n"
 	body = (

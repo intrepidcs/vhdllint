@@ -26,6 +26,15 @@ For full usage instructions, run:
 
   `$ vhdllint --help`
 
+## Running Unit Tests
+
+Install dependencies and run the tests with pytest:
+
+```
+$ pip install -e . pytest
+$ pytest tests/ -v
+```
+
 # Rules
 
 - Generics should always be upper case

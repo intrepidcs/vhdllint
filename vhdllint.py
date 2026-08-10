@@ -2990,8 +2990,10 @@ def CheckPortMaps(filename, clean_lines, line_num, error):
 
 
 def CheckIdentifiersString(filename, line, line_num, error):
-	# skip strings in quotes
-	words = re.findall(r"[\"].*?[\"]|[\'].*?[\']|(\w+)", line)
+	# skip strings in quotes and character literals ('x'). Don't use a greedy
+	# single-quote pair match here since VHDL attribute ticks (e.g. arr'high)
+	# aren't paired quotes and would incorrectly swallow identifiers between them.
+	words = re.findall(r"[\"].*?[\"]|\'.\'|(\w+)", line)
 	for w in words:
 		if IsIdentifier(w):
 			# mark identifier as used
@@ -3307,8 +3309,10 @@ def CheckTimeUnits(filename, clean_lines, line_num, error):
 
 def CheckReservedWords(filename, clean_lines, line_num, error):
 	line = clean_lines.lines[line_num]
-	# skip strings in quotes
-	words = re.findall(r"[\"\'].*?[\"\']|(\w+)", line)
+	# skip strings in quotes and character literals ('x'). Don't use a greedy
+	# single-quote pair match here since VHDL attribute ticks (e.g. arr'high)
+	# aren't paired quotes and would incorrectly swallow identifiers between them.
+	words = re.findall(r"[\"].*?[\"]|\'.\'|(\w+)", line)
 	# remove any reserved words
 	words = [i for i in words if IsReservedWord(i)]
 	for w in words:

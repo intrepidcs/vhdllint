@@ -2670,9 +2670,59 @@ def CheckCaseStatements(filename, clean_lines, line_num, end_line, is_sequential
 		CheckCaseStatement(filename, clean_lines, line_num, l_end_line, label, name, is_sequential, error)
 
 
+def SplitStatements(line):
+	"""Splits a cleaned source line into individual ';'-terminated VHDL
+	statement fragments, stripping any leading if/elsif/else/when/with-select
+	guard from each fragment.
+	Reusable by any code that needs per-statement (rather than per-line)
+	granularity, so guard conditions on lines like "if a then x<=1;" or
+	"when a => x<=1;" aren't lost, and chained statements on one physical
+	line (e.g. "if a then x<=1; else x<=2; end if;") are each attributed
+	correctly instead of one anchored regex swallowing the whole line.
+	Args:
+		line: A single cleaned source line (comments/strings already elided).
+	Returns:
+		A list of (remaining_text, guard_words) tuples, one per non-empty
+		';'-delimited statement fragment. guard_words is a list of
+		identifiers found in any stripped guard condition(s).
+	"""
+	statements = []
+	for stmt in line.split(';'):
+		if not stmt.strip():
+			continue
+
+		guard_words = []
+		remaining = stmt
+		while True:
+			g = Match(r'^\s*(?:if|elsif)\b\s*(.*?)\s+then\s+(.*)$', remaining)
+			if g:
+				guard_words += re.findall(r'\b[\w\']+\b', g.group(1))
+				remaining = g.group(2)
+				continue
+			g = Match(r'^\s*else\s+(.*)$', remaining)
+			if g:
+				remaining = g.group(1)
+				continue
+			g = Match(r'^\s*when\s+(.*?)\s*=>\s*(.*)$', remaining)
+			if g:
+				guard_words += re.findall(r'\b[\w\']+\b', g.group(1))
+				remaining = g.group(2)
+				continue
+			g = Match(r'^\s*with\s+(.*?)\s+select\s+(.*)$', remaining)
+			if g:
+				guard_words += re.findall(r'\b[\w\']+\b', g.group(1))
+				remaining = g.group(2)
+				continue
+			break
+
+		statements.append((remaining, guard_words))
+	return statements
+
+
 def FindUsedVariables(line, direct_lhs_name=False):
 	write = set()
 	read = set()
+	is_assign = False
 	# Ignore quoted text so identifier scans do not flag words inside reports.
 	line_no_strings = re.sub(r'"[^"]*"', '""', line)
 
@@ -2683,27 +2733,26 @@ def FindUsedVariables(line, direct_lhs_name=False):
 			return None
 		return match.group(1)
 
-	# check for assignments
-	match = Match(r'^\s*(.*?)\s*[<:]\=\s*(.*)\s*;', line_no_strings)
-	if match:
-		lhs_expr = match.group(1)
-		rhs_expr = match.group(2)
-		if direct_lhs_name == True:
-			# use lhs as given
-			lhs = lhs_expr
-			write_words = [lhs]
+	for remaining, guard_words in SplitStatements(line_no_strings):
+		match = Match(r'^\s*(.*?)\s*[<:]\=\s*(.*)\s*$', remaining)
+		if match:
+			lhs_expr = match.group(1)
+			rhs_expr = match.group(2)
+			if direct_lhs_name:
+				# use lhs as given
+				lhs = lhs_expr
+				write_words = [lhs]
+			else:
+				lhs = _GetBaseIdentifier(lhs_expr)
+				write_words = [lhs] if lhs else []
+			write |= set([i for i in write_words if IsSignalIdentifier(i)])
+
+			read_words = re.findall(r'\b[\w\']+\b', rhs_expr) + guard_words
+			is_assign = True
 		else:
-			lhs = _GetBaseIdentifier(lhs_expr)
-			write_words = [lhs] if lhs else []
-		write = set([i for i in write_words if IsSignalIdentifier(i)])
+			read_words = re.findall(r'\b[\w\']+\b', remaining) + guard_words
 
-		read_words = re.findall(r'\b[\w\']+\b', rhs_expr)
-		is_assign = True
-	else:
-		read_words = re.findall(r'\b[\w\']+\b', line_no_strings)
-		is_assign = False
-
-	read = set([i for i in read_words if IsSignalIdentifier(i)])
+		read |= set([i for i in read_words if IsSignalIdentifier(i)])
 
 	return (write, read, is_assign)
 

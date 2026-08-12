@@ -218,6 +218,74 @@ def test_missing_signal_in_sensitivity_list():
 	assert any("b_s" in message for _, _, _, message in errors)
 
 
+def test_sensitivity_signal_used_only_in_guard_condition():
+	decls = (
+		"  signal a_s : std_logic;\n"
+		"  signal b_s : std_logic;\n"
+		"  signal y_s : std_logic;\n"
+	)
+	body = (
+		"  process(a_s)\n"
+		"  begin\n"
+		"    if b_s = '1' then y_s <= a_s; end if;\n"
+		"  end process;\n"
+	)
+	errors = [e for e in lint(design(decls=decls, body=body))
+			  if e[1] == "runtime/sensitivity"]
+	assert any("b_s" in message for _, _, _, message in errors)
+
+
+def test_sensitivity_signals_in_chained_if_else_one_line():
+	decls = (
+		"  signal cond_s : std_logic;\n"
+		"  signal a_s : std_logic;\n"
+		"  signal b_s : std_logic;\n"
+		"  signal y_s : std_logic;\n"
+	)
+	body = (
+		"  process(a_s)\n"
+		"  begin\n"
+		"    if cond_s = '1' then y_s <= a_s; else y_s <= b_s; end if;\n"
+		"  end process;\n"
+	)
+	errors = [e for e in lint(design(decls=decls, body=body))
+			  if e[1] == "runtime/sensitivity"]
+	messages = " ".join(message for _, _, _, message in errors)
+	assert "cond_s" in messages
+	assert "b_s" in messages
+
+
+def test_multiple_drivers_detected_with_case_one_liners():
+	decls = (
+		"  type state_t is (idle, running);\n"
+		"  signal next_state_s : state_t;\n"
+	)
+	body = (
+		"  process(a_s)\n"
+		"  begin\n"
+		"    case a_s is\n"
+		"      when '0' => next_state_s <= idle;\n"
+		"      when others => next_state_s <= running;\n"
+		"    end case;\n"
+		"  end process;\n"
+		"\n"
+		"  process(d_i)\n"
+		"  begin\n"
+		"    case d_i is\n"
+		"      when '0' => next_state_s <= idle;\n"
+		"      when others => next_state_s <= running;\n"
+		"    end case;\n"
+		"  end process;\n"
+	)
+	assert "runtime/multiple_drivers" in categories(lint(design(decls=decls, body=body)))
+
+
+def test_output_port_read_via_with_select():
+	decls = "  signal x_s : std_logic;\n"
+	body = "  with q_o select x_s <= '1' when '1', '0' when others;\n"
+	assert "build/vhdl2008/outputs" in categories(lint(design(decls=decls, body=body)))
+
+
 def test_clk_event_flagged():
 	body = (
 		"  process(clk_i)\n"
